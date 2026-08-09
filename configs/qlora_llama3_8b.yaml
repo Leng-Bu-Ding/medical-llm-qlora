@@ -1,0 +1,48 @@
+project:
+  seed: 3407
+  output_dir: outputs/llama3_medquad
+data:
+  dataset_name: keivalya/MedQuad-MedicalQnADataset
+  dataset_revision: 5b0961fbaa6d7f9c344c5d59c29943fb900c2eca
+  split: train
+  question_field: Question
+  answer_field: Answer
+  test_size: 0.1
+  max_sequence_length: 512
+  evaluation_size: 300
+model:
+  name: unsloth/llama-3-8b-Instruct-bnb-4bit
+  revision: fd5a4dc328319c1cfe9489eccfb9c6406bdfd469
+  load_in_4bit: true
+  chat_template: llama-3
+lora:
+  rank: 16
+  alpha: 16
+  dropout: 0.0
+  bias: none
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  gradient_checkpointing: unsloth
+  use_rslora: false
+training:
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 4
+  effective_batch_size: 8
+  learning_rate: 0.0002
+  epochs: 1
+  warmup_steps: 10
+  optimizer: adamw_8bit
+  weight_decay: 0.01
+  scheduler: linear
+  logging_steps: 10
+  save_steps: 200
+  packing: false
+generation:
+  max_new_tokens: 128
+  do_sample: false
+  temperature: null
+  batch_size: 4
+evaluation:
+  bootstrap_samples: 2000
+  confidence_level: 0.95
+  bootstrap_seed: 3407
+  bertscore_model: microsoft/deberta-xlarge-mnli

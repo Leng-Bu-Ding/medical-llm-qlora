@@ -1,0 +1,19 @@
+{
+  "status": "historical_not_reproduced_in_this_repository_yet",
+  "source": "original Guided Study notebook outputs",
+  "sample_count": 50,
+  "seed": 3407,
+  "base": {
+    "rouge1": 0.2715,
+    "rouge2": 0.0703,
+    "rougeL": 0.1644,
+    "bertscore_f1": 0.8387
+  },
+  "fine_tuned": {
+    "rouge1": 0.4317,
+    "rouge2": 0.2667,
+    "rougeL": 0.3425,
+    "bertscore_f1": 0.8863
+  },
+  "warning": "These are historical 50-sample results, not the planned 300-sample evaluation."
+}

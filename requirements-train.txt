@@ -1,0 +1,15 @@
+# Unsloth is installed from its official package on the GPU runtime.
+unsloth
+datasets>=3.0,<5
+transformers>=4.50,<5
+trl>=0.15,<1
+peft>=0.14,<1
+accelerate>=1.2,<2
+bitsandbytes>=0.45,<1
+evaluate>=0.4,<1
+rouge-score>=0.1.2,<1
+bert-score>=0.3.13,<1
+pyyaml>=6.0,<7
+numpy>=1.26,<3
+pandas>=2.2,<4
+matplotlib>=3.8,<4
