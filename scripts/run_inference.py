@@ -18,9 +18,13 @@ def main() -> None:
     parser.add_argument("--data", default=str(ROOT / "data/processed/evaluation_300.jsonl"))
     parser.add_argument("--adapter", required=True)
     parser.add_argument("--output", default=str(ROOT / "outputs/predictions_300.jsonl"))
+    parser.add_argument("--limit", type=int)
     args = parser.parse_args()
+    examples = read_jsonl(args.data)
+    if args.limit is not None:
+        examples = examples[: args.limit]
     count = generate_base_and_finetuned(
-        load_config(args.config), read_jsonl(args.data), args.adapter, args.output
+        load_config(args.config), examples, args.adapter, args.output
     )
     print(f"Saved {count} paired predictions to {args.output}")
 
