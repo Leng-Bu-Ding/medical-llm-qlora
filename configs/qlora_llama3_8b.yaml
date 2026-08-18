@@ -54,6 +54,7 @@ evaluation:
   confidence_level: 0.95
   bootstrap_seed: 3407
   bertscore_model: microsoft/deberta-xlarge-mnli
+  bertscore_batch_size: 4
   error_case_count: 20
 external_evaluation:
   dataset_name: qiaojin/PubMedQA

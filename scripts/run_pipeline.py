@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+STAGES = ("prepare", "train", "inference", "evaluation", "safety")
 
 
 def _run(arguments: list[str]) -> None:
@@ -30,7 +31,14 @@ def main() -> None:
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--resume-from-checkpoint")
     parser.add_argument("--include-external-eval", action="store_true")
+    parser.add_argument(
+        "--start-at",
+        choices=STAGES,
+        default="prepare",
+        help="Resume a run from an existing artifact stage without repeating earlier stages.",
+    )
     args = parser.parse_args()
+    start_index = STAGES.index(args.start_at)
 
     run_dir = ROOT / "outputs" / args.run_id
     data_dir = run_dir / "data"
@@ -42,18 +50,19 @@ def main() -> None:
     safety_summary = run_dir / "safety_summary.json"
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    _run(
-        [
-            sys.executable,
-            "scripts/prepare_data.py",
-            "--config",
-            args.config,
-            "--protocol",
-            args.protocol,
-            "--output",
-            str(data_dir),
-        ]
-    )
+    if start_index <= STAGES.index("prepare"):
+        _run(
+            [
+                sys.executable,
+                "scripts/prepare_data.py",
+                "--config",
+                args.config,
+                "--protocol",
+                args.protocol,
+                "--output",
+                str(data_dir),
+            ]
+        )
     train_command = [
         sys.executable,
         "scripts/train_qlora.py",
@@ -72,7 +81,8 @@ def main() -> None:
         train_command.extend(
             ["--max-steps", "10", "--train-limit", "8", "--validation-limit", "8"]
         )
-    _run(train_command)
+    if start_index <= STAGES.index("train"):
+        _run(train_command)
 
     inference_command = [
         sys.executable,
@@ -88,21 +98,23 @@ def main() -> None:
     ]
     if args.smoke:
         inference_command.extend(["--limit", "8"])
-    _run(inference_command)
-    _run(
-        [
-            sys.executable,
-            "scripts/evaluate_predictions.py",
-            "--config",
-            args.config,
-            "--predictions",
-            str(predictions),
-            "--output",
-            str(evaluation_summary),
-            "--errors-output",
-            str(error_cases),
-        ]
-    )
+    if start_index <= STAGES.index("inference"):
+        _run(inference_command)
+    if start_index <= STAGES.index("evaluation"):
+        _run(
+            [
+                sys.executable,
+                "scripts/evaluate_predictions.py",
+                "--config",
+                args.config,
+                "--predictions",
+                str(predictions),
+                "--output",
+                str(evaluation_summary),
+                "--errors-output",
+                str(error_cases),
+            ]
+        )
 
     safety_command = [
         sys.executable,
@@ -116,17 +128,18 @@ def main() -> None:
     ]
     if args.smoke:
         safety_command.extend(["--limit", "8"])
-    _run(safety_command)
-    _run(
-        [
-            sys.executable,
-            "scripts/evaluate_safety.py",
-            "--predictions",
-            str(safety_predictions),
-            "--output",
-            str(safety_summary),
-        ]
-    )
+    if start_index <= STAGES.index("safety"):
+        _run(safety_command)
+        _run(
+            [
+                sys.executable,
+                "scripts/evaluate_safety.py",
+                "--predictions",
+                str(safety_predictions),
+                "--output",
+                str(safety_summary),
+            ]
+        )
 
     public_sources = [
         data_dir / "data_manifest.json",
@@ -182,6 +195,7 @@ def main() -> None:
         "run_id": args.run_id,
         "protocol": args.protocol,
         "smoke": args.smoke,
+        "start_at": args.start_at,
         "include_external_eval": args.include_external_eval,
         "completed_at": datetime.now(timezone.utc).isoformat(),
         "status": "smoke_tested" if args.smoke else "measured",

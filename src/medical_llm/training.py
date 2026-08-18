@@ -18,6 +18,18 @@ def prompt_completion_record(example: MedicalExample) -> dict[str, Any]:
     }
 
 
+def validated_eos_token(tokenizer: Any) -> str:
+    """Return a real tokenizer EOS token instead of a trainer placeholder."""
+    eos_token = getattr(tokenizer, "eos_token", None)
+    if not isinstance(eos_token, str) or not eos_token:
+        raise RuntimeError("the chat tokenizer must define a non-empty eos_token")
+    token_id = tokenizer.convert_tokens_to_ids(eos_token)
+    unknown_id = getattr(tokenizer, "unk_token_id", None)
+    if token_id is None or (unknown_id is not None and token_id == unknown_id):
+        raise RuntimeError(f"tokenizer eos_token {eos_token!r} is not in the vocabulary")
+    return eos_token
+
+
 def _plot_losses(log_history: list[dict[str, Any]], output_path: Path) -> None:
     import matplotlib.pyplot as plt
 
@@ -95,11 +107,14 @@ def train(
     validation_limit: int | None = None,
     lora_rank: int | None = None,
 ) -> dict[str, Any]:
+    # Unsloth must patch Transformers/TRL before either package is imported.
+    # Importing TRL first can replace the real EOS with the invalid <EOS_TOKEN>
+    # placeholder (unslothai/unsloth#2797).
+    from unsloth import FastLanguageModel, is_bfloat16_supported  # noqa: I001
+    from unsloth.chat_templates import get_chat_template
     import torch
     from datasets import Dataset
     from trl import SFTConfig, SFTTrainer
-    from unsloth import FastLanguageModel, is_bfloat16_supported
-    from unsloth.chat_templates import get_chat_template
 
     model_config = config["model"]
     data_config = config["data"]
@@ -180,6 +195,7 @@ def train(
             dataset_num_proc=2,
             packing=bool(settings["packing"]),
             completion_only_loss=bool(settings["completion_only_loss"]),
+            eos_token=validated_eos_token(tokenizer),
             include_num_input_tokens_seen="all",
         ),
     )
