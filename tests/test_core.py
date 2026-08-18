@@ -26,6 +26,7 @@ from medical_llm.training import (
     audit_completion_loss_mask,
     pinned_adapter_config,
     prompt_completion_record,
+    validated_eos_token,
 )
 
 
@@ -104,6 +105,17 @@ def test_prompt_completion_record_separates_user_and_assistant() -> None:
     record = prompt_completion_record(MedicalExample("id", "question", "answer", "type"))
     assert record["prompt"] == [{"role": "user", "content": "question"}]
     assert record["completion"] == [{"role": "assistant", "content": "answer"}]
+
+
+def test_sft_uses_a_real_tokenizer_eos_token() -> None:
+    class Tokenizer:
+        eos_token = "<|eot_id|>"
+        unk_token_id = 0
+
+        def convert_tokens_to_ids(self, token: str) -> int:
+            return {"<|eot_id|>": 128009}.get(token, self.unk_token_id)
+
+    assert validated_eos_token(Tokenizer()) == "<|eot_id|>"
 
 
 def test_completion_loss_mask_requires_prompt_and_answer_tokens() -> None:
