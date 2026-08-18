@@ -80,15 +80,28 @@ def evaluate_predictions(
                 metrics[name].append(scores[name].fmeasure)
             metrics["output_tokens"].append(float(len(re.findall(r"\w+", prediction))))
             metrics["repeated_4gram_rate"].append(_repeated_ngram_rate(prediction))
-        _, _, bert_f1 = bert_score(
-            predictions,
-            references,
-            model_type=config["evaluation"]["bertscore_model"],
-            lang="en",
-            verbose=True,
-        )
-        metrics["bertscore_f1"] = bert_f1.cpu().numpy().tolist()
         per_system[system] = metrics
+
+    # Score Base and FT together so the large encoder is loaded only once. A
+    # bounded batch is important on 16 GiB GPUs: bert-score defaults to 64,
+    # which is fine for the 8-row smoke but can OOM on the measured 300 rows.
+    combined_predictions = [
+        *[str(item["base_prediction"]) for item in records],
+        *[str(item["ft_prediction"]) for item in records],
+    ]
+    combined_references = [*references, *references]
+    _, _, combined_bert_f1 = bert_score(
+        combined_predictions,
+        combined_references,
+        model_type=config["evaluation"]["bertscore_model"],
+        lang="en",
+        batch_size=int(config["evaluation"].get("bertscore_batch_size", 4)),
+        verbose=True,
+    )
+    bert_values = combined_bert_f1.cpu().numpy().tolist()
+    split = len(records)
+    per_system["base_prediction"]["bertscore_f1"] = bert_values[:split]
+    per_system["ft_prediction"]["bertscore_f1"] = bert_values[split:]
 
     bootstrap = config["evaluation"]
     bootstrap_samples = int(bootstrap["bootstrap_samples"])

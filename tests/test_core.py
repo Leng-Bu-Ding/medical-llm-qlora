@@ -43,6 +43,7 @@ def test_config_preserves_effective_batch_size_and_protocol() -> None:
     assert config["project"]["seed"] == 3407
     assert config["data"]["protocol"] == "clean"
     assert config["training"]["completion_only_loss"] is True
+    assert config["evaluation"]["bertscore_batch_size"] == 4
     assert len(config_sha256(config)) == 64
 
 
