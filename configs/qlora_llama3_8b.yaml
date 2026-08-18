@@ -2,14 +2,19 @@ project:
   seed: 3407
   output_dir: outputs/llama3_medquad
 data:
+  protocol: clean
   dataset_name: keivalya/MedQuad-MedicalQnADataset
   dataset_revision: 5b0961fbaa6d7f9c344c5d59c29943fb900c2eca
   split: train
+  qtype_field: qtype
   question_field: Question
   answer_field: Answer
   test_size: 0.1
+  validation_size: 0.1
   max_sequence_length: 512
   evaluation_size: 300
+  near_duplicate_threshold: 0.90
+  near_duplicate_neighbors: 10
 model:
   name: unsloth/llama-3-8b-Instruct-bnb-4bit
   revision: fd5a4dc328319c1cfe9489eccfb9c6406bdfd469
@@ -35,6 +40,9 @@ training:
   scheduler: linear
   logging_steps: 10
   save_steps: 200
+  save_total_limit: 2
+  eval_strategy: epoch
+  completion_only_loss: true
   packing: false
 generation:
   max_new_tokens: 128
@@ -46,3 +54,11 @@ evaluation:
   confidence_level: 0.95
   bootstrap_seed: 3407
   bertscore_model: microsoft/deberta-xlarge-mnli
+  error_case_count: 20
+external_evaluation:
+  dataset_name: qiaojin/PubMedQA
+  dataset_revision: 323752ad243ce751ba75c9222d34a3130d080030
+  subset: pqa_labeled
+  split: train
+  evaluation_size: 100
+  max_sequence_length: 512

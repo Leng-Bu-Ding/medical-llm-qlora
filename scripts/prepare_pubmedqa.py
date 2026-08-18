@@ -9,14 +9,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from medical_llm.config import load_config
-from medical_llm.prepare import prepare_medquad
+from medical_llm.external_eval import prepare_pubmedqa
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=str(ROOT / "configs/qlora_llama3_8b.yaml"))
-    parser.add_argument("--output", default=str(ROOT / "data/processed"))
-    parser.add_argument("--protocol", choices=("legacy", "clean"))
+    parser.add_argument("--output", required=True)
     args = parser.parse_args()
     config = load_config(args.config)
     from unsloth import FastLanguageModel
@@ -29,12 +28,7 @@ def main() -> None:
         load_in_4bit=config["model"]["load_in_4bit"],
     )
     tokenizer = get_chat_template(tokenizer, chat_template=config["model"]["chat_template"])
-    print(
-        json.dumps(
-            prepare_medquad(config, tokenizer, args.output, protocol=args.protocol),
-            indent=2,
-        )
-    )
+    print(json.dumps(prepare_pubmedqa(config, tokenizer, args.output), indent=2))
 
 
 if __name__ == "__main__":

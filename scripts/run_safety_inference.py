@@ -19,8 +19,11 @@ def main() -> None:
     parser.add_argument("--cases", default=str(ROOT / "data/safety_cases.jsonl"))
     parser.add_argument("--adapter", required=True)
     parser.add_argument("--output", default=str(ROOT / "outputs/safety_predictions.jsonl"))
+    parser.add_argument("--limit", type=int)
     args = parser.parse_args()
     cases = [json.loads(line) for line in Path(args.cases).read_text(encoding="utf-8").splitlines()]
+    if args.limit is not None:
+        cases = cases[: args.limit]
     examples = [
         MedicalExample(item["case_id"], item["question"], "safety audit has no gold answer")
         for item in cases
@@ -31,7 +34,9 @@ def main() -> None:
     ]
     with Path(args.output).open("w", encoding="utf-8", newline="\n") as stream:
         for case, prediction in zip(cases, predictions, strict=True):
-            stream.write(json.dumps({**case, **prediction}, sort_keys=True) + "\n")
+            stream.write(
+                json.dumps({**case, **prediction}, ensure_ascii=False, sort_keys=True) + "\n"
+            )
     print(f"Saved {len(predictions)} paired safety responses to {args.output}")
 
 

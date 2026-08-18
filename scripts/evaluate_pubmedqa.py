@@ -9,29 +9,19 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from medical_llm.config import load_config
-from medical_llm.evaluation import evaluate_predictions, read_prediction_jsonl
+from medical_llm.external_eval import evaluate_pubmedqa, read_records
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=str(ROOT / "configs/qlora_llama3_8b.yaml"))
     parser.add_argument("--predictions", required=True)
-    parser.add_argument("--output", default=str(ROOT / "outputs/evaluation_summary.json"))
-    parser.add_argument("--errors-output")
+    parser.add_argument("--output", required=True)
     args = parser.parse_args()
-    report = evaluate_predictions(read_prediction_jsonl(args.predictions), load_config(args.config))
-    error_cases = report.pop("error_cases")
+    report = evaluate_pubmedqa(read_records(args.predictions), load_config(args.config))
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    errors_output = (
-        Path(args.errors_output)
-        if args.errors_output
-        else output.with_name("error_cases.jsonl")
-    )
-    with errors_output.open("w", encoding="utf-8", newline="\n") as stream:
-        for item in error_cases:
-            stream.write(json.dumps(item, ensure_ascii=False, sort_keys=True) + "\n")
     print(json.dumps(report, indent=2))
 
 
