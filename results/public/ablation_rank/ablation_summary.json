@@ -1,0 +1,24 @@
+{
+  "max_steps": 200,
+  "runs": [
+    {
+      "final_validation_loss": 1.3833510875701904,
+      "peak_memory_gib": 6.1497,
+      "rank": 8,
+      "runtime_seconds": 1364.2972,
+      "steps_per_second": 0.147,
+      "trainable_parameters": 20971520
+    },
+    {
+      "final_validation_loss": 1.3848415613174438,
+      "peak_memory_gib": 6.3456,
+      "rank": 16,
+      "runtime_seconds": 1399.9891,
+      "steps_per_second": 0.143,
+      "trainable_parameters": 41943040
+    }
+  ],
+  "status": "measured_pilot_ablation",
+  "train_limit": 2000,
+  "validation_limit": 300
+}
