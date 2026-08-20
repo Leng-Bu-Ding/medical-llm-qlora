@@ -1,59 +1,1104 @@
-# Medical LLM QLoRA：从课程 Notebook 到可审计实验
+# Medical LLM QLoRA
 
-这是一个面向 LLM 应用算法岗位的独立项目：使用固定 revision 的 Llama-3 8B
-4-bit 模型，在 MedQuAD 上进行 QLoRA 监督微调，并在同一批未参与训练的问题上成对比较
-Base 与 Fine-tuned 模型。
+An engineering-oriented and reproducible LLM fine-tuning project based on **Llama-3 8B + QLoRA**, focusing on medical question answering, controlled evaluation, safety auditing, ablation study, external transfer evaluation, and experiment artifact management.
 
-本项目用于研究与工程评估，不是医疗器械，不提供诊断或用药建议，也没有经过临床验证。
+本项目从一个课程级 Notebook 实验扩展为完整的工程化训练与评测 Pipeline，覆盖：
 
-## 当前结论
+- MedQuAD 数据清洗与去重
+- Train / Validation / Test 隔离
+- Llama-3 8B 4-bit QLoRA SFT
+- Completion-only Loss
+- Base / Fine-tuned 成对推理
+- ROUGE / BERTScore 评测
+- Paired Bootstrap 95% Confidence Interval
+- Error Case Analysis
+- Medical Safety Audit
+- LoRA Rank Ablation
+- PubMedQA External Evaluation
+- Checkpoint Resume
+- Model Artifact 持久化
+- Full Reproduction / Fast Recovery
 
-- 旧 `Guided Study.ipynb` 完成过一次真实 T4 训练：过滤后 Train 12,996、Test
-  1,437，1 epoch 共 1,625 steps，约 156.43 分钟。
-- 旧 Notebook 的 50 题历史结果保存在
-  `results/public/historical_50_summary.json`。它只证明旧实验跑过，不能替代新协议结果。
-- 当前仓库已实现 clean 数据协议、completion-only loss、Validation、断点恢复、300 题配对
-  评测、bootstrap 95% CI、盲化安全复核、外部迁移检查、消融入口、CI 和云端 runner。
-- 新 Adapter、300 题指标与安全输出尚需在 GPU 上实跑。在实跑前，任何简历文案都不得把历史
-  50 题结果表述为当前工程结果。
+> 本项目仅用于研究、工程实验与能力评估，不是医疗器械，不提供医疗诊断或用药建议，也没有经过临床验证。
 
-## 为什么不是只会跑 Notebook
+---
 
-`legacy` 协议保留旧实验顺序，用于复现历史。`clean` 协议用于正式结论：
+# 1. Project Overview
 
-1. 清理空值并按规范化问答精确去重。
-2. 用字符 TF-IDF 发现近重复问题，将同一重复簇放在同一个 split。
-3. 按 qtype 和重复簇进行 80/10/10 Train/Validation/Test 划分，seed 固定为 3407。
-4. 从 Test 确定性选取 300 题；Base/FT 共用 prompt hash 与 generation hash。
-5. 训练采用 prompt-completion 数据，并在真实训练 batch 上审计：prompt/padding token 被
-   `-100` mask，回答 token 才进入 loss。
-6. 同时报告 ROUGE、BERTScore、长度/重复度、FT−Base 配对 bootstrap 95% CI、改善/退化
-   数量与典型错误样本。
-7. 对 50 条安全案例做自动筛查和匿名 A/B 人工复核；它是安全审计，不是临床验证。
+核心目标不是简单地“把 Llama-3 在医疗数据上微调一次”，而是回答以下几个问题：
 
-每次运行都会记录数据和配置 hash、依赖版本、Git commit、运行时间、吞吐、峰值显存与
-checkpoint 信息。私有大文件进入 `outputs/<run_id>/`，可公开的小摘要进入
-`results/public/<run_id>/`。
+1. **领域 SFT 是否真的提升医疗问答能力？**
+2. **提升是否在固定测试集上稳定存在？**
+3. **领域能力提升是否伴随 Safety Regression？**
+4. **LoRA rank 增大是否真的带来收益？**
+5. **MedQuAD 上获得的能力能否迁移到 PubMedQA？**
+6. **模型训练完成后，是否能够脱离原始 GPU Session 快速恢复？**
+7. **整个实验是否能够被重新运行、验证和审计？**
 
-## 一键 GPU 流程
+因此项目采用如下实验结构：
 
-推荐在 Kaggle/Colab GPU 或 AutoDL RTX 3090 24GB Linux 环境运行。Windows CPU 只执行
-测试和静态检查，不适合 8B QLoRA。
+```text
+Raw Dataset
+    ↓
+Cleaning / Deduplication
+    ↓
+Leakage-aware Train / Validation / Test Split
+    ↓
+QLoRA Supervised Fine-tuning
+    ↓
+Base vs Fine-tuned Paired Inference
+    ↓
+Automatic Evaluation
+    ↓
+Bootstrap Confidence Interval
+    ↓
+Error Analysis
+    ↓
+Safety Audit
+    ↓
+Rank Ablation
+    ↓
+External Transfer Evaluation
+```
+
+---
+
+# 2. Main Experiment
+
+主实验：
+
+```text
+run_id = clean_main_v1
+protocol = clean
+```
+
+Base Model：
+
+```text
+unsloth/llama-3-8b-Instruct-bnb-4bit
+```
+
+固定 model revision：
+
+```text
+fd5a4dc328319c1cfe9489eccfb9c6406bdfd469
+```
+
+训练数据：
+
+```text
+MedQuAD
+```
+
+固定 dataset revision：
+
+```text
+5b0961fbaa6d7f9c344c5d59c29943fb900c2eca
+```
+
+随机种子：
+
+```text
+3407
+```
+
+---
+
+# 3. Data Pipeline
+
+正式实验使用 `clean` protocol，而不是直接随机划分原始问答数据。
+
+数据处理流程：
+
+```text
+MedQuAD
+    ↓
+Remove invalid / empty records
+    ↓
+Exact deduplication
+    ↓
+Near-duplicate detection
+    ↓
+Duplicate-group-aware split
+    ↓
+Train / Validation / Test
+    ↓
+Fixed 300-sample evaluation subset
+```
+
+## Exact Deduplication
+
+基于规范化后的：
+
+```text
+question + answer
+```
+
+执行精确去重。
+
+## Near-Duplicate Detection
+
+使用：
+
+```text
+character TF-IDF
+n-gram = 3–5
+nearest-neighbor search
+threshold = 0.90
+```
+
+识别语义和文本形式高度相似的问题。
+
+相同 near-duplicate group 不允许同时出现在 Train 和 Test 中，从而降低：
+
+```text
+train-test leakage
+```
+
+风险。
+
+## Data Split
+
+最终主实验：
+
+| Split | Samples |
+|---|---:|
+| Train | 11,505 |
+| Validation | 1,453 |
+| Test | 独立保留 |
+| Fixed evaluation subset | 300 |
+
+300 条正式评测样本从 Test 中确定性抽取。
+
+---
+
+# 4. QLoRA Training
+
+核心训练配置：
+
+| Item | Value |
+|---|---:|
+| Base model | Llama-3 8B Instruct |
+| Quantization | 4-bit |
+| LoRA rank | 16 |
+| LoRA alpha | 16 |
+| LoRA dropout | 0 |
+| Max sequence length | 512 |
+| Per-device batch size | 2 |
+| Gradient accumulation | 4 |
+| Effective batch size | 8 |
+| Learning rate | 2e-4 |
+| Epoch | 1 |
+| Optimizer | AdamW 8-bit |
+| Scheduler | Linear |
+| Seed | 3407 |
+
+LoRA target modules：
+
+```text
+q_proj
+k_proj
+v_proj
+o_proj
+gate_proj
+up_proj
+down_proj
+```
+
+---
+
+# 5. Completion-only Loss
+
+训练采用 instruction / response 形式。
+
+Loss 只作用于 assistant answer tokens：
+
+```text
+User Prompt Tokens      → ignored
+Padding Tokens          → ignored
+Assistant Answer Tokens → supervised
+```
+
+真实训练 batch 上进行了 loss mask audit：
+
+```text
+masked prompt / padding tokens = 48
+supervised answer tokens       = 443
+```
+
+保证训练目标不是简单地学习复现 prompt，而是真正优化回答部分。
+
+---
+
+# 6. Training Efficiency
+
+正式 Main Run：
+
+| Metric | Result |
+|---|---:|
+| Train samples | 11,505 |
+| Validation samples | 1,453 |
+| Tokens seen | 2.41M |
+| Total parameters | 4.58B |
+| Trainable parameters | 41.94M |
+| Trainable ratio | ~0.92% |
+| Epoch | 1 |
+| Train loss | 0.9871 |
+| GPU | Tesla T4 |
+| Peak VRAM | 6.37 GiB |
+| Runtime | 10,400 s |
+| Runtime | ~2.89 h |
+
+仅训练约：
+
+```text
+0.92%
+```
+
+的模型参数，即可完成 8B 模型的领域适配。
+
+---
+
+# 7. Paired Base vs Fine-tuned Evaluation
+
+正式测试使用固定的：
+
+```text
+300 samples
+```
+
+每一个问题都同时生成：
+
+```text
+Base Prediction
+Fine-tuned Prediction
+```
+
+两者使用完全相同的：
+
+```text
+question
+prompt template
+generation config
+model revision
+```
+
+为了确保成对实验的一致性，每条样本记录：
+
+```text
+sample_id
+prompt_hash
+generation_hash
+model_revision
+```
+
+生成采用：
+
+```text
+do_sample = false
+```
+
+从而降低随机 sampling 带来的评测噪声。
+
+---
+
+# 8. Main Evaluation Results
+
+## 300-sample Base vs Fine-tuned
+
+| Metric | Base | Fine-tuned | Delta |
+|---|---:|---:|---:|
+| BERTScore F1 | 0.5859 | **0.6823** | **+0.0965** |
+| ROUGE-1 | 0.3206 | **0.4287** | **+0.1080** |
+| ROUGE-2 | 0.0967 | **0.2486** | **+0.1519** |
+| ROUGE-L | 0.1903 | **0.3335** | **+0.1432** |
+| Output tokens | 92.72 | **70.71** | -22.01 |
+| Repeated 4-gram rate | 0.0157 | 0.0303 | +0.0146 |
+
+样本级比较：
+
+```text
+Improved : 247
+Regressed: 53
+Tied     : 0
+```
+
+即：
+
+```text
+247 / 300 = 82.3%
+```
+
+的测试样本在 Fine-tuned 模型上取得改善。
+
+---
+
+# 9. Statistical Significance
+
+为了避免只比较单个均值，本项目对：
+
+```text
+FT − Base
+```
+
+进行 paired bootstrap。
+
+配置：
+
+```text
+bootstrap samples = 2000
+confidence level  = 95%
+```
+
+关键结果：
+
+### BERTScore F1
+
+```text
+Mean Delta = +0.0965
+
+95% CI:
+[0.0838, 0.1095]
+```
+
+### ROUGE-L
+
+```text
+Mean Delta = +0.1432
+
+95% CI:
+[0.1199, 0.1671]
+```
+
+两个核心指标的置信区间均不跨 0。
+
+因此主实验中的提升不仅体现在平均值上，也具有较稳定的统计支持。
+
+---
+
+# 10. Error Analysis
+
+Pipeline 自动保存：
+
+```text
+error_cases.jsonl
+```
+
+并分别提取：
+
+```text
+largest improvements
+largest regressions
+```
+
+用于分析：
+
+- Fine-tuning 在什么问题类型上有效
+- 哪些回答发生退化
+- 回答长度变化
+- 重复生成问题
+- Domain SFT 带来的行为变化
+
+这使项目从：
+
+```text
+"指标提高了"
+```
+
+进一步扩展到：
+
+```text
+"为什么提高 / 为什么退化"
+```
+
+---
+
+# 11. Safety Audit
+
+仅提高医疗 QA 指标并不能说明模型更安全。
+
+因此另外设计了：
+
+```text
+50 medical safety cases
+```
+
+覆盖：
+
+```text
+20 urgent-care cases
+15 medication-safety cases
+15 insufficient-information cases
+```
+
+评测指标包括：
+
+```text
+Certain Diagnosis Rate
+Timely Care Rate
+Dosage Rate When Prohibited
+Uncertainty Rate When Expected
+```
+
+结果：
+
+| Metric | Base | Fine-tuned |
+|---|---:|---:|
+| Certain diagnosis rate | **0.08** | 0.52 |
+| Timely-care rate on urgent cases | **0.50** | 0.35 |
+| Uncertainty rate when expected | **0.733** | 0.433 |
+| Dosage rate when prohibited | 0.00 | 0.029 |
+
+结果表明：
+
+> Domain SFT 明显提升了医疗 QA 能力，但同时削弱了部分安全行为。
+
+例如 Fine-tuned 模型：
+
+```text
+更倾向直接给出确定诊断
+更少表达不确定性
+更少提醒紧急就医
+```
+
+因此：
+
+```text
+Domain Knowledge Improvement
+≠
+Safety Alignment Improvement
+```
+
+这是本项目的重要实验发现之一。
+
+未来可进一步研究：
+
+```text
+Safety-aware SFT
+Refusal Data
+Uncertainty-aware Training
+Preference Optimization
+DPO
+```
+
+> Warning: 本 Safety Audit 是 heuristic portfolio evaluation，不是 clinical validation。
+
+---
+
+# 12. LoRA Rank Ablation
+
+为了回答：
+
+```text
+为什么 Main Run 使用 rank = 16？
+更大的 rank 是否真的更好？
+```
+
+额外进行了 controlled pilot ablation。
+
+固定：
+
+```text
+Train samples      = 2000
+Validation samples = 300
+Training steps     = 200
+```
+
+只改变：
+
+```text
+LoRA Rank
+```
+
+比较：
+
+```text
+rank = 8
+rank = 16
+```
+
+结果：
+
+| Metric | Rank 8 | Rank 16 |
+|---|---:|---:|
+| Trainable parameters | **20.97M** | 41.94M |
+| Validation loss | **1.38335** | 1.38484 |
+| Peak VRAM | **6.15 GiB** | 6.35 GiB |
+| Runtime | **1364 s** | 1400 s |
+| Steps / second | **0.147** | 0.143 |
+
+结论：
+
+```text
+Rank 16
+→ trainable parameters ×2
+→ slightly higher memory
+→ slightly longer runtime
+→ no validation-loss improvement
+```
+
+而 Rank 8：
+
+```text
+参数减少 50%
+Validation Loss 基本不变
+```
+
+因此在该 pilot 条件下：
+
+> **Rank 8 提供了更优的 parameter-efficiency trade-off。**
+
+Main Run 的 Rank 16 仍然保留为正式 baseline，而后续训练可优先尝试 Rank 8。
+
+---
+
+# 13. PubMedQA External Evaluation
+
+为了避免只在 MedQuAD 域内测试，使用：
+
+```text
+PubMedQA
+```
+
+进行了外部迁移检查。
+
+测试样本：
+
+```text
+100
+```
+
+结果：
+
+| Metric | Result |
+|---|---:|
+| Base accuracy | 0.73 |
+| Fine-tuned accuracy | **0.79** |
+| Accuracy delta | **+0.06** |
+| Improved | 9 |
+| Regressed | 3 |
+| Tied | 88 |
+
+Paired accuracy delta：
+
+```text
++0.06
+```
+
+95% CI：
+
+```text
+[-0.01, 0.12025]
+```
+
+因此可以观察到：
+
+```text
+positive transfer signal
+```
+
+但由于置信区间跨 0：
+
+> 不能宣称该提升具有统计显著性。
+
+更准确的结论是：
+
+> MedQuAD SFT 后的模型在 PubMedQA 上没有发生明显能力崩塌，并出现一定正向迁移趋势，但现有 100 样本不足以确认稳定显著增益。
+
+> Warning: 这是 capability-transfer check，不是 clinical validation。
+
+---
+
+# 14. Experiment Artifact Management
+
+一个完整的 ML 项目不等于一个 GitHub Repository。
+
+本项目将实验资产拆分为：
+
+```text
+Code
+Data
+Base Model
+Fine-tuned Weights
+Experiment Results
+Environment
+```
+
+不同资产采用不同方式持久化。
+
+## Asset Architecture
+
+```text
+                         Medical LLM Project
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+              ▼                   ▼                   ▼
+           GitHub            Hugging Face          Compute
+              │                   │                   │
+         Source Code         QLoRA Adapter      Kaggle / Colab
+         Configs             Model Artifact     GPU Server
+         Tests
+         README
+         Public Results
+```
+
+具体划分：
+
+| Asset | Storage |
+|---|---|
+| Source Code | GitHub |
+| Config | GitHub |
+| Environment Definition | GitHub |
+| Public Metrics | GitHub |
+| Base Model | Hugging Face |
+| QLoRA Adapter | Hugging Face |
+| Runtime Checkpoints | Compute / Artifact Storage |
+| Large Predictions | Compute / Artifact Storage |
+| Processed Dataset | Compute / Artifact Storage |
+
+核心原则：
+
+> **Compute Platform 不应该是唯一的 Permanent Storage。**
+
+Kaggle / Colab / GPU Server 主要负责：
+
+```text
+Compute
+```
+
+而不是承担所有长期资产保存。
+
+---
+
+# 15. Model Artifact
+
+正式 Main Run 得到的 QLoRA Adapter 已上传到 Hugging Face：
+
+```text
+Lengbuding/llama3-medquad-qlora
+```
+
+Model Hub：
+
+https://huggingface.co/Lengbuding/llama3-medquad-qlora
+
+主要包含：
+
+```text
+adapter_model.safetensors
+adapter_config.json
+tokenizer.json
+tokenizer_config.json
+special_tokens_map.json
+chat_template.jinja
+```
+
+Base Model 本身不重复保存。
+
+最终 Fine-tuned Model 可以理解为：
+
+```text
+Llama-3 Base Model
+        +
+QLoRA Adapter
+        =
+Medical Fine-tuned Model
+```
+
+---
+
+# 16. Artifact Portability Verification
+
+为了验证上传到 Hugging Face 的 Adapter 没有损坏，进行了两层验证。
+
+## Level 1: Binary-level Verification
+
+分别计算：
+
+```text
+Original Adapter
+Restored Adapter
+```
+
+核心文件 SHA256。
+
+验证结果：
+
+```text
+adapter_model.safetensors: True
+adapter_config.json: True
+tokenizer.json: True
+tokenizer_config.json: True
+special_tokens_map.json: True
+chat_template.jinja: True
+```
+
+即核心文件：
+
+> **逐字节完全一致。**
+
+## Level 2: Inference-level Verification
+
+使用：
+
+```text
+相同 Base Model
+相同 revision
+相同 prompt
+相同 tokenizer
+相同 generation config
+do_sample = false
+```
+
+分别加载：
+
+```text
+Original Adapter
+Restored Adapter
+```
+
+进行相同样本推理。
+
+验证：
+
+```text
+sample_id       identical
+prompt_hash     identical
+generation_hash identical
+base_prediction identical
+ft_prediction   identical
+```
+
+因此 Hugging Face 上的 Adapter 已验证可以：
+
+```text
+Download
+→ Load
+→ Inference
+```
+
+并复现原始模型行为。
+
+---
+
+# 17. Full Reproduction
+
+**Full Reproduction** 指：
+
+> 从源码和原始数据开始，重新走完整实验流程。
+
+适用于：
+
+```text
+验证整个实验是否真的可复现
+重新训练新的模型版本
+修改数据处理策略
+修改训练超参数
+```
+
+流程：
+
+```text
+GitHub Repository
+        ↓
+Install Environment
+        ↓
+Download Raw Dataset
+        ↓
+Data Cleaning
+        ↓
+Deduplication
+        ↓
+Train / Validation / Test Split
+        ↓
+QLoRA Training
+        ↓
+Base / FT Inference
+        ↓
+Evaluation
+        ↓
+Safety Audit
+```
+
+运行：
 
 ```bash
 python -m pip install -r requirements-train.txt
+
 python scripts/run_pipeline.py \
   --run-id clean_main_v1 \
   --protocol clean
 ```
 
-流水线依次执行：
+Main Pipeline：
 
 ```text
-prepare → train → paired inference → evaluation → safety inference → public summary
+prepare
+→ train
+→ inference
+→ evaluation
+→ safety
+→ pipeline_manifest.json
 ```
 
-先运行 8 样本、10 step 的强制 smoke：
+当：
+
+```text
+outputs/clean_main_v1/pipeline_manifest.json
+```
+
+生成时，表示完整 Main Run 已成功结束。
+
+---
+
+# 18. Fast Recovery
+
+**Fast Recovery** 与 Full Reproduction 不同。
+
+它的目标不是重新训练，而是：
+
+> 在新的 Kaggle / Colab / GPU Server 上快速恢复已经训练好的模型。
+
+流程：
+
+```text
+git clone
+        ↓
+install dependencies
+        ↓
+download Base Model
+        ↓
+download QLoRA Adapter
+        ↓
+load model
+        ↓
+inference / evaluation
+```
+
+因此无需重新执行：
+
+```text
+3-hour QLoRA Training
+```
+
+核心思想：
+
+```text
+可复现
+≠
+每次都从头训练
+```
+
+正式项目应该同时支持：
+
+```text
+Full Reproduction
++
+Fast Recovery
+```
+
+前者用于验证实验。
+
+后者用于日常开发和迁移。
+
+---
+
+# 19. Checkpoint Recovery
+
+训练过程中每：
+
+```text
+200 steps
+```
+
+保存 checkpoint。
+
+例如：
+
+```text
+checkpoint-200
+checkpoint-400
+checkpoint-600
+...
+```
+
+Checkpoint 的主要作用不是最终部署，而是：
+
+```text
+Training Recovery
+```
+
+例如：
+
+```text
+Training
+→ Step 1200
+→ Session disconnected
+→ Resume from checkpoint-1200
+```
+
+命令：
+
+```bash
+python scripts/run_pipeline.py \
+  --run-id clean_main_v1 \
+  --protocol clean \
+  --resume-from-checkpoint \
+  outputs/clean_main_v1/training/checkpoints/checkpoint-1200
+```
+
+因此：
+
+```text
+Checkpoint = Recovery Artifact
+Adapter    = Final Model Artifact
+```
+
+二者用途不同。
+
+---
+
+# 20. Public Experiment Results
+
+为了避免把大型模型和 checkpoint 放进 GitHub，只把小型实验结果公开保存。
+
+Main Run：
+
+```text
+results/public/clean_main_v1/
+```
+
+包含：
+
+```text
+data_manifest.json
+training_summary.json
+evaluation_summary.json
+error_cases.jsonl
+safety_summary.json
+pipeline_manifest.json
+```
+
+Rank Ablation：
+
+```text
+results/public/ablation_rank/
+└── ablation_summary.json
+```
+
+PubMedQA：
+
+```text
+results/public/pubmedqa_external/
+└── pubmedqa_summary.json
+```
+
+因此 GitHub 保存的是：
+
+```text
+Code
++
+Config
++
+Experiment Evidence
+```
+
+而不是几十 GB 的 Runtime Artifacts。
+
+---
+
+# 21. Reproducibility Metadata
+
+主实验自动记录：
+
+```text
+Git commit
+Config SHA256
+Dataset revision
+Base model revision
+Python version
+PyTorch version
+Transformers version
+TRL version
+PEFT version
+Unsloth version
+GPU
+Peak VRAM
+Training runtime
+Throughput
+```
+
+本次正式环境：
+
+```text
+Python       3.12.13
+PyTorch      2.10.0+cu128
+Transformers 4.57.6
+TRL          0.24.0
+PEFT         0.19.1
+Unsloth      2026.8.18
+GPU          Tesla T4
+```
+
+从而避免：
+
+```text
+"不知道当时到底用了什么环境"
+```
+
+的问题。
+
+---
+
+# 22. Repository Structure
+
+```text
+medical-llm-qlora/
+│
+├── configs/
+│   └── qlora_llama3_8b.yaml
+│
+├── data/
+│   └── safety_cases.jsonl
+│
+├── docs/
+│
+├── notebooks/
+│   └── cloud_runner.ipynb
+│
+├── scripts/
+│   ├── prepare_data.py
+│   ├── train_qlora.py
+│   ├── run_inference.py
+│   ├── evaluate_predictions.py
+│   ├── run_safety_inference.py
+│   ├── evaluate_safety.py
+│   ├── run_pipeline.py
+│   ├── run_ablation.py
+│   └── run_external_eval.py
+│
+├── src/
+│   └── medical_llm/
+│
+├── tests/
+│
+├── results/
+│   └── public/
+│       ├── clean_main_v1/
+│       ├── ablation_rank/
+│       └── pubmedqa_external/
+│
+├── requirements-train.txt
+├── requirements-dev.txt
+└── README.md
+```
+
+---
+
+# 23. Running the Experiments
+
+## Smoke Test
 
 ```bash
 python scripts/run_pipeline.py \
@@ -62,21 +1107,32 @@ python scripts/run_pipeline.py \
   --smoke
 ```
 
-中断后恢复：
+用于：
+
+```text
+验证环境
+验证数据流程
+验证模型加载
+验证训练
+验证 inference
+验证 evaluation
+```
+
+而不会先消耗数小时运行完整实验。
+
+---
+
+## Main Run
 
 ```bash
 python scripts/run_pipeline.py \
   --run-id clean_main_v1 \
-  --protocol clean \
-  --resume-from-checkpoint outputs/clean_main_v1/training/checkpoints/checkpoint-800
+  --protocol clean
 ```
 
-薄 Notebook 入口为 `notebooks/cloud_runner.ipynb`。它只负责克隆仓库、安装依赖、检查
-GPU、调用脚本和下载产物，不复制训练或评测逻辑。
+---
 
-## 增强实验
-
-rank 8/16 固定 pilot 消融：
+## Rank Ablation
 
 ```bash
 python scripts/run_ablation.py \
@@ -84,70 +1140,122 @@ python scripts/run_ablation.py \
   --output-dir outputs/ablation_rank
 ```
 
-使用主实验 Adapter 运行 PubMedQA 100 题能力迁移检查：
+---
+
+## PubMedQA External Evaluation
 
 ```bash
 python scripts/run_external_eval.py \
   --adapter outputs/clean_main_v1/training/adapter \
-  --output-dir outputs/clean_main_v1
+  --output-dir outputs/pubmedqa_external
 ```
 
-PubMedQA 检查的是 yes/no/maybe 迁移与能力保持，不是临床效果。
+---
 
-## 人工安全复核
+# 24. Engineering Takeaways
 
-完成安全推理后会生成：
+这个项目最终得到的不只是一个 Fine-tuned Model。
 
-- `review_primary.csv`：50 条匿名 A/B，全量由项目作者复核；
-- `review_secondary.csv`：固定抽取 20 条，由第二位普通复核者独立复核；
-- `review_key.json`：A/B 到 Base/FT 的盲化映射，复核结束前不要打开。
+主要工程结论包括：
 
-填写规则见 `docs/human_review_rubric.md`。完成后运行：
-
-```bash
-python scripts/summarize_human_review.py \
-  --primary outputs/clean_main_v1/review_primary.csv \
-  --secondary outputs/clean_main_v1/review_secondary.csv \
-  --output outputs/clean_main_v1/reviewer_agreement.json
-```
-
-## 本地质量门禁
-
-```bash
-python -m pip install -r requirements-dev.txt
-python -m pip install --no-deps -e .
-python -m pytest -q
-python -m ruff check .
-```
-
-GitHub Actions 对每次 push/PR 执行同样的 CPU 测试和静态检查。GPU smoke 与完整实验需在
-云端单独执行。
-
-## 目录
+### 1. QLoRA 可以低成本完成 8B 模型领域适配
 
 ```text
-configs/                     固定的数据、训练、生成与评测配置
-data/safety_cases.jsonl      20 急症 + 15 用药 + 15 信息不足案例
-docs/                        复核规范、数据/模型卡和面试讲解
-notebooks/cloud_runner.ipynb 薄云端入口
-scripts/                     prepare/train/inference/eval/pipeline 入口
-src/medical_llm/             可测试的核心实现
-tests/                       不依赖 GPU 的确定性测试
-results/public/              历史结果和未来可公开小型摘要
+Trainable Parameters ≈ 0.92%
+Peak VRAM ≈ 6.37 GiB
 ```
 
-## 核心训练配置
+单张 Tesla T4 即可完成训练。
 
-| 项目 | 值 |
-|---|---:|
-| Base model | `unsloth/llama-3-8b-Instruct-bnb-4bit` |
-| Quantization | 4-bit |
-| LoRA | rank 16, alpha 16 |
-| Target modules | q/k/v/o + gate/up/down projections |
-| Max sequence length | 512 |
-| Batch / accumulation | 2 / 4（effective batch 8） |
-| Learning rate | 2e-4 |
-| Epochs | 1 |
-| Seed | 3407 |
+### 2. Domain SFT 显著提升 QA 指标
 
-项目状态、已验证事实和剩余 GPU 工作见 `PROJECT_STATUS.md`。
+300 条固定测试集：
+
+```text
+BERTScore F1
+0.5859 → 0.6823
+
+ROUGE-L
+0.1903 → 0.3335
+```
+
+### 3. 领域能力提升不等于 Safety 提升
+
+Fine-tuned 模型表现出：
+
+```text
+higher certain-diagnosis tendency
+lower uncertainty expression
+lower urgent-care reminder rate
+```
+
+### 4. 更大的 LoRA Rank 不一定值得
+
+Pilot Ablation：
+
+```text
+Rank 8
+≈ Rank 16 validation loss
+
+但参数量减少 50%
+```
+
+### 5. 外部迁移需要统计谨慎
+
+PubMedQA：
+
+```text
+0.73 → 0.79
+```
+
+但：
+
+```text
+95% CI crosses zero
+```
+
+因此只能称：
+
+```text
+positive transfer signal
+```
+
+而不是 statistically significant improvement。
+
+### 6. ML 项目不应该只保存代码
+
+完整项目资产包括：
+
+```text
+Code
+Data
+Environment
+Model Weights
+Experiment Artifacts
+Metrics
+```
+
+训练完成后应当能够：
+
+```text
+Train Once
+→ Persist Artifacts
+→ Reuse Repeatedly
+```
+
+而不是每次更换 GPU Session 都重新训练。
+
+---
+
+# 25. Disclaimer
+
+This repository is an engineering and research portfolio project.
+
+It is **not**:
+
+- a medical device
+- a clinical decision system
+- a diagnostic system
+- a medication recommendation system
+
+The reported safety evaluation is a heuristic engineering audit and must not be interpreted as clinical validation.
