@@ -1,0 +1,17 @@
+{
+  "base_accuracy": 0.73,
+  "fine_tuned_accuracy": 0.79,
+  "improved": 9,
+  "invalid_label_count": {
+    "base": 0,
+    "fine_tuned": 0
+  },
+  "paired_accuracy_delta": 0.06,
+  "paired_delta_ci_high": 0.12024999999999864,
+  "paired_delta_ci_low": -0.01,
+  "regressed": 3,
+  "sample_count": 100,
+  "status": "measured_external_transfer_check",
+  "tied": 88,
+  "warning": "Capability-transfer check, not a clinical validation."
+}
