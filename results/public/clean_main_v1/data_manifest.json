@@ -1,0 +1,118 @@
+{
+  "audit": {
+    "exact_duplicates_removed": 28,
+    "group_overlap_count": 0,
+    "invalid_rows": 0,
+    "length_filtered_or_invalid_rows": 1967,
+    "near_duplicate_audit": {
+      "cluster_count": 7441,
+      "largest_cluster": 35,
+      "linked_pairs": 14783,
+      "multi_member_clusters": 2276,
+      "neighbors_considered": 10,
+      "threshold": 0.9
+    }
+  },
+  "dataset": {
+    "name": "keivalya/MedQuad-MedicalQnADataset",
+    "raw_count": 16407,
+    "revision": "5b0961fbaa6d7f9c344c5d59c29943fb900c2eca",
+    "split": "train"
+  },
+  "files": {
+    "evaluation_300": {
+      "count": 300,
+      "path": "/kaggle/working/medical-llm-qlora/outputs/clean_main_v1/data/evaluation_300.jsonl",
+      "qtype_counts": {
+        "causes": 16,
+        "complications": 1,
+        "considerations": 6,
+        "exams and tests": 7,
+        "frequency": 25,
+        "genetic changes": 23,
+        "information": 92,
+        "inheritance": 29,
+        "outlook": 8,
+        "prevention": 3,
+        "research": 5,
+        "susceptibility": 5,
+        "symptoms": 33,
+        "treatment": 47
+      },
+      "sha256": "281926cc8d8b7eb38edeac3e3882617be38a0658bba1fab37d90575a5a4165f8"
+    },
+    "test": {
+      "count": 1454,
+      "path": "/kaggle/working/medical-llm-qlora/outputs/clean_main_v1/data/test.jsonl",
+      "qtype_counts": {
+        "causes": 76,
+        "complications": 6,
+        "considerations": 23,
+        "exams and tests": 46,
+        "frequency": 127,
+        "genetic changes": 98,
+        "information": 423,
+        "inheritance": 148,
+        "outlook": 42,
+        "prevention": 14,
+        "research": 35,
+        "susceptibility": 21,
+        "symptoms": 185,
+        "treatment": 210
+      },
+      "sha256": "169b088a29a20c760fff11c1b34b3004e1b5306517cd6d227d9ce7e22169bd66"
+    },
+    "train": {
+      "count": 11505,
+      "path": "/kaggle/working/medical-llm-qlora/outputs/clean_main_v1/data/train.jsonl",
+      "qtype_counts": {
+        "causes": 497,
+        "complications": 30,
+        "considerations": 162,
+        "exams and tests": 349,
+        "frequency": 899,
+        "genetic changes": 826,
+        "information": 3332,
+        "inheritance": 1148,
+        "outlook": 292,
+        "prevention": 128,
+        "research": 297,
+        "stages": 14,
+        "support groups": 1,
+        "susceptibility": 220,
+        "symptoms": 1583,
+        "treatment": 1727
+      },
+      "sha256": "a58cae37151fbe2afdca38bc9b82396d62aeb64cc6b06d1f6504eb785c65239a"
+    },
+    "validation": {
+      "count": 1453,
+      "path": "/kaggle/working/medical-llm-qlora/outputs/clean_main_v1/data/validation.jsonl",
+      "qtype_counts": {
+        "causes": 60,
+        "complications": 4,
+        "considerations": 20,
+        "exams and tests": 50,
+        "frequency": 94,
+        "genetic changes": 103,
+        "information": 424,
+        "inheritance": 143,
+        "outlook": 26,
+        "prevention": 17,
+        "research": 34,
+        "susceptibility": 27,
+        "symptoms": 219,
+        "treatment": 232
+      },
+      "sha256": "a4d27df327323eb31b2226a01955d9d0a2cf51b1bab3e504165ce1681354c82b"
+    }
+  },
+  "processing": {
+    "max_sequence_length": 512,
+    "near_duplicate_neighbors": 10,
+    "near_duplicate_threshold": 0.9
+  },
+  "protocol": "clean",
+  "seed": 3407,
+  "status": "measured_data_preparation"
+}

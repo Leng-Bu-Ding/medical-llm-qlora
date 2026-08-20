@@ -1,0 +1,49 @@
+{
+  "adapter_base_model": "unsloth/llama-3-8b-Instruct-bnb-4bit",
+  "adapter_base_revision": "fd5a4dc328319c1cfe9489eccfb9c6406bdfd469",
+  "adapter_dir": "/kaggle/working/medical-llm-qlora/outputs/clean_main_v1/training/adapter",
+  "completion_only_loss": true,
+  "config_sha256": "69bd225d950f49c39a5307d2f2a9db471ac6de81c0e201b883f0e7c08fa550da",
+  "environment": {
+    "git_commit": "6a031506df4e1ad96765d67959f4aadeac01c54b",
+    "packages": {
+      "bert-score": "0.3.13",
+      "bitsandbytes": "0.50.1",
+      "datasets": "4.3.0",
+      "peft": "0.19.1",
+      "scikit-learn": "1.6.1",
+      "torch": "2.10.0+cu128",
+      "transformers": "4.57.6",
+      "trl": "0.24.0",
+      "unsloth": "2026.8.18"
+    },
+    "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+    "python": "3.12.13"
+  },
+  "gpu": "Tesla T4",
+  "input_tokens_seen": 2411230,
+  "lora_rank": 16,
+  "loss_mask_audit": {
+    "masked_prompt_or_padding_tokens": 48,
+    "supervised_answer_tokens": 443
+  },
+  "peak_memory_bytes": 6836923904,
+  "peak_memory_gib": 6.3674,
+  "runtime_seconds": 10400.1727,
+  "samples_per_second": 1.106,
+  "status": "measured",
+  "steps_per_second": 0.138,
+  "total_parameters": 4582543360,
+  "train_samples": 11505,
+  "trainable_parameters": 41943040,
+  "trainer_metrics": {
+    "epoch": 1.0,
+    "num_input_tokens_seen": 2411230,
+    "total_flos": 1.0918340299923456e+17,
+    "train_loss": 0.9871058699320885,
+    "train_runtime": 10400.1727,
+    "train_samples_per_second": 1.106,
+    "train_steps_per_second": 0.138
+  },
+  "validation_samples": 1453
+}

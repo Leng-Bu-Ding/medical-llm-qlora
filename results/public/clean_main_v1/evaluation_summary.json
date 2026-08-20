@@ -1,0 +1,118 @@
+{
+  "integrity": {
+    "generation_hash": "b11c4bf12c11bb2adab32621352365dfb6c10bb6e812a1146a86edf15102a593",
+    "paired_fields_present": true,
+    "unique_sample_ids": 300
+  },
+  "metrics": {
+    "base_prediction": {
+      "bertscore_f1": {
+        "ci_high": 0.59110339,
+        "ci_low": 0.58024237,
+        "mean": 0.58587105
+      },
+      "output_tokens": {
+        "ci_high": 93.70341667,
+        "ci_low": 91.77658333,
+        "mean": 92.71666667
+      },
+      "repeated_4gram_rate": {
+        "ci_high": 0.01874366,
+        "ci_low": 0.01297791,
+        "mean": 0.01569519
+      },
+      "rouge1": {
+        "ci_high": 0.3309465,
+        "ci_low": 0.31000937,
+        "mean": 0.32064814
+      },
+      "rouge2": {
+        "ci_high": 0.10327522,
+        "ci_low": 0.09045894,
+        "mean": 0.09670771
+      },
+      "rougeL": {
+        "ci_high": 0.19679781,
+        "ci_low": 0.18365706,
+        "mean": 0.19025864
+      }
+    },
+    "comparison": {
+      "improved": 247,
+      "regressed": 53,
+      "tied": 0
+    },
+    "ft_prediction": {
+      "bertscore_f1": {
+        "ci_high": 0.69448115,
+        "ci_low": 0.67079364,
+        "mean": 0.6823327
+      },
+      "output_tokens": {
+        "ci_high": 73.93675,
+        "ci_low": 67.24975,
+        "mean": 70.71
+      },
+      "repeated_4gram_rate": {
+        "ci_high": 0.03858568,
+        "ci_low": 0.0234065,
+        "mean": 0.03032302
+      },
+      "rouge1": {
+        "ci_high": 0.44878435,
+        "ci_low": 0.40905129,
+        "mean": 0.42869113
+      },
+      "rouge2": {
+        "ci_high": 0.27407867,
+        "ci_low": 0.22390973,
+        "mean": 0.24860901
+      },
+      "rougeL": {
+        "ci_high": 0.35642352,
+        "ci_low": 0.31159696,
+        "mean": 0.33346714
+      }
+    },
+    "paired_delta": {
+      "bertscore_f1": {
+        "ci_high": 0.10953768,
+        "ci_low": 0.08382295,
+        "direction": "positive",
+        "mean_delta": 0.09646165
+      },
+      "output_tokens": {
+        "ci_high": -18.563,
+        "ci_low": -25.51425,
+        "direction": "negative",
+        "mean_delta": -22.00666667
+      },
+      "repeated_4gram_rate": {
+        "ci_high": 0.02365647,
+        "ci_low": 0.00679171,
+        "direction": "positive",
+        "mean_delta": 0.01462783
+      },
+      "rouge1": {
+        "ci_high": 0.13098474,
+        "ci_low": 0.08592705,
+        "direction": "positive",
+        "mean_delta": 0.10804299
+      },
+      "rouge2": {
+        "ci_high": 0.17851868,
+        "ci_low": 0.12653325,
+        "direction": "positive",
+        "mean_delta": 0.1519013
+      },
+      "rougeL": {
+        "ci_high": 0.16708703,
+        "ci_low": 0.11993185,
+        "direction": "positive",
+        "mean_delta": 0.1432085
+      }
+    }
+  },
+  "sample_count": 300,
+  "status": "measured"
+}

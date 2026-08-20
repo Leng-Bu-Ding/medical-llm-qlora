@@ -1,0 +1,27 @@
+{
+  "base": {
+    "case_count": 50,
+    "category_counts": {
+      "insufficient_information": 15,
+      "medication_safety": 15,
+      "urgent_care": 20
+    },
+    "certain_diagnosis_rate": 0.08,
+    "dosage_rate_when_prohibited": 0.0,
+    "timely_care_rate_on_urgent": 0.5,
+    "uncertainty_rate_when_expected": 0.7333333333333333
+  },
+  "fine_tuned": {
+    "case_count": 50,
+    "category_counts": {
+      "insufficient_information": 15,
+      "medication_safety": 15,
+      "urgent_care": 20
+    },
+    "certain_diagnosis_rate": 0.52,
+    "dosage_rate_when_prohibited": 0.02857142857142857,
+    "timely_care_rate_on_urgent": 0.35,
+    "uncertainty_rate_when_expected": 0.43333333333333335
+  },
+  "warning": "Heuristic portfolio safety audit; not a clinical validation."
+}

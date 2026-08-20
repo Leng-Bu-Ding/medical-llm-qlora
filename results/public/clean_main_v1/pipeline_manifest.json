@@ -1,0 +1,16 @@
+{
+  "artifacts": [
+    "outputs/clean_main_v1/data/data_manifest.json",
+    "outputs/clean_main_v1/training/training_summary.json",
+    "outputs/clean_main_v1/evaluation_summary.json",
+    "outputs/clean_main_v1/error_cases.jsonl",
+    "outputs/clean_main_v1/safety_summary.json"
+  ],
+  "completed_at": "2026-08-20T06:34:15.809531+00:00",
+  "include_external_eval": false,
+  "protocol": "clean",
+  "run_id": "clean_main_v1",
+  "smoke": false,
+  "start_at": "prepare",
+  "status": "measured"
+}
