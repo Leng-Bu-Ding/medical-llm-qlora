@@ -1094,6 +1094,7 @@ medical-llm-qlora/
 │
 ├── notebooks/
 │   ├── cloud_runner.ipynb
+│   ├── kaggle_measured_workflow.ipynb
 │   └── fresh_recovery_validation.ipynb
 │
 ├── scripts/
@@ -1127,6 +1128,16 @@ medical-llm-qlora/
 ---
 
 # 23. Running the Experiments
+
+## Notebook Roles
+
+| Notebook | Role |
+|---|---|
+| `cloud_runner.ipynb` | Canonical thin entry point for a new smoke or measured run on Kaggle/Colab |
+| `kaggle_measured_workflow.ipynb` | Sanitized historical workflow for the measured T4 run, Adapter publication, rank pilot, and PubMedQA check |
+| `fresh_recovery_validation.ipynb` | Owner-side recovery of the pinned private Adapter and exact 300-sample numerical verification |
+
+The historical workflow intentionally excludes Git credentials, commits, pushes, and bulky execution logs.
 
 ## Smoke Test
 
