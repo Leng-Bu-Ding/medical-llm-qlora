@@ -1,41 +1,61 @@
 # 项目状态
 
-更新时间：2026-08-15
+更新时间：2026-08-27
 
 ## 状态定义
 
-- `implemented`：代码与本地测试完成，但没有 GPU 实验数字。
-- `smoke_tested`：GPU 10-step、Adapter 保存与重载已经通过。
-- `measured`：固定协议的完整运行结束并保存原始产物。
-- `human_reviewed`：人工盲审与一致率计算完成。
+- `implemented`：代码与本地测试完成，但尚无固定协议的 GPU 实验产物。
+- `smoke_tested`：GPU smoke test、Adapter 保存与重载已经通过。
+- `measured`：固定协议完整运行结束，原始产物和公开摘要已经保存。
+- `recovery_verified`：从持久化 Adapter 和固定代码版本重新加载后，数值复现通过。
+- `human_reviewed`：人工盲审与复核者一致率计算完成。
 
-## 已核实的历史事实
+## 当前状态：`measured + recovery_verified`
 
-旧 `Guided Study.ipynb` 曾在 T4 上完成 1 epoch：过滤后 Train 12,996、Test 1,437，
-1,625 steps，约 156.43 分钟。50 题结果为 ROUGE-L 0.1644→0.3425、BERTScore F1
-0.8387→0.8863。该结果标记为 historical，不代表当前 clean 协议。
+仓库已经完成 clean 主实验、自动评测、安全规则筛查、LoRA rank pilot、PubMedQA 外部
+能力检查，以及一次独立 Kaggle Adapter 恢复验证。当前尚未达到 `human_reviewed`。
 
-## 当前仓库：implemented
+### Clean 主实验
 
-- `legacy|clean` 双协议与固定 seed 3407。
-- 空值清理、精确去重、近重复聚类、重复簇隔离和 80/10/10 split。
-- 数据 revision、各 split 数量/qtype、文件 SHA-256 与泄漏审计 manifest。
-- prompt-completion 训练、completion-only loss 实际 batch 审计、Validation、checkpoint 恢复。
-- 训练时间、吞吐、峰值显存、依赖版本、Git commit、配置 hash 记录。
-- 300 题 Base/FT 成对推理，prompt/generation hash 一致性检查。
-- ROUGE、BERTScore、配对 bootstrap 95% CI、改善/退化统计与错误案例导出。
-- 50 条安全自动筛查、匿名 A/B 复核表、固定 20 条第二复核样本和 Cohen's Kappa。
-- PubMedQA 100 题外部能力检查和 rank 8/16 固定 pilot 消融入口。
-- 一键 pipeline、薄 `cloud_runner.ipynb`、GitHub Actions。
-- 本地结果：16 个 CPU 测试通过，Ruff 静态检查通过。
+- Base model：`unsloth/llama-3-8b-Instruct-bnb-4bit`
+- GPU：Tesla T4
+- Train / validation：11,505 / 1,453
+- 训练：1 epoch，运行 10,400.17 秒，峰值显存 6.3674 GiB
+- 300 条固定测试样本：BERTScore F1 `0.5859 -> 0.6823`
+- ROUGE-L：`0.1903 -> 0.3335`
+- 样本级结果：247 改善、53 退化、0 持平
 
-## 尚未完成：不能写成新实验成果
+完整数值及置信区间以 `results/public/clean_main_v1/` 中的 JSON 为准。
 
-- GPU 10-step smoke 与 Adapter 重载。
-- clean 协议完整 1 epoch 训练。
-- 固定 300 题 Base/FT 指标与配对置信区间。
-- 50 条安全输出和人工盲审。
-- rank 8/16 消融与 PubMedQA 100 题实测。
+### 安全筛查
 
-当前允许写“设计并实现了可复现评测工程”；只有 GPU 产物生成并核验后，才允许写新的
-模型提升、显存、耗时与吞吐数字。
+50 条启发式安全用例显示，Fine-tuned 模型在确定性诊断、紧急就医提示和不确定性表达等
+行为上存在退化信号。该结果不是临床验证，也不能仅凭 QA 指标提升推断模型更安全。
+
+### LoRA rank pilot
+
+固定 200 steps pilot 中，rank 8 的 validation loss 为 `1.38335`，rank 16 为 `1.38484`；
+rank 8 同时使用更少可训练参数和略低峰值显存。该结果只适用于当前 pilot 配置。
+
+### PubMedQA 外部检查
+
+100 条样本 accuracy 为 `0.73 -> 0.79`，配对差值为 `+0.06`，95% CI 为
+`[-0.01, 0.12025]`。区间跨 0，因此只报告为能力迁移检查，不宣称统计显著提升。
+
+### Fresh recovery 验证
+
+从私有 Hugging Face Adapter revision `d26749288d78cab0839468dfa532a3beafcba871` 恢复模型，
+重新生成 300 条成对预测。核心指标与 `clean_main_v1` 在 `1e-7` 容差内完全一致。
+
+- 可复现 Notebook：`notebooks/fresh_recovery_validation.ipynb`
+- 精简验证摘要：`results/public/recovery_validation/recovery_summary.json`
+
+## 尚未完成
+
+- 50 条安全输出的完整人工盲审。
+- 固定 20 条第二复核样本和 Cohen's Kappa。
+- 决定是否公开 Adapter，或记录第三方申请访问的流程。
+- 基于最终人工复核结果更新模型卡中的人工安全结论。
+
+在完成上述工作前，仓库可以描述为“已测量并验证 Adapter 可恢复”，但不能描述为经过人工
+或临床安全验证。

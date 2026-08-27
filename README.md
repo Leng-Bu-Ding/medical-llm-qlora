@@ -1,5 +1,9 @@
 # Medical LLM QLoRA
 
+[![CI](https://github.com/Leng-Bu-Ding/medical-llm-qlora/actions/workflows/ci.yml/badge.svg)](https://github.com/Leng-Bu-Ding/medical-llm-qlora/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10--3.12-blue.svg)](pyproject.toml)
+
 An engineering-oriented and reproducible LLM fine-tuning project based on **Llama-3 8B + QLoRA**, focusing on medical question answering, controlled evaluation, safety auditing, ablation study, external transfer evaluation, and experiment artifact management.
 
 本项目从一个课程级 Notebook 实验扩展为完整的工程化训练与评测 Pipeline，覆盖：
@@ -20,6 +24,17 @@ An engineering-oriented and reproducible LLM fine-tuning project based on **Llam
 - Full Reproduction / Fast Recovery
 
 > 本项目仅用于研究、工程实验与能力评估，不是医疗器械，不提供医疗诊断或用药建议，也没有经过临床验证。
+
+## Current Status
+
+截至 2026-08-27，clean 主实验、300 条成对评测、LoRA rank pilot、PubMedQA 外部检查和
+Adapter fresh recovery 均已完成。项目状态为 `measured + recovery_verified`；人工安全盲审
+尚未完成，因此不标记为 `human_reviewed`。
+
+- [项目状态](PROJECT_STATUS.md)
+- [下一步清单](TODO.md)
+- [模型卡](docs/model_card.md)
+- [公开实验结果](results/public/)
 
 ---
 
@@ -712,6 +727,12 @@ Medical Fine-tuned Model
 
 为了验证上传到 Hugging Face 的 Adapter 没有损坏，进行了两层验证。
 
+可重复执行的 owner-side 验证协议保存在
+[`notebooks/fresh_recovery_validation.ipynb`](notebooks/fresh_recovery_validation.ipynb)，
+精简结果保存在
+[`results/public/recovery_validation/recovery_summary.json`](results/public/recovery_validation/recovery_summary.json)。
+Adapter 当前为私有仓库，因此这证明所有者侧恢复能力，不代表匿名第三方可以直接下载。
+
 ## Level 1: Binary-level Verification
 
 分别计算：
@@ -994,6 +1015,13 @@ results/public/pubmedqa_external/
 └── pubmedqa_summary.json
 ```
 
+Fresh Recovery：
+
+```text
+results/public/recovery_validation/
+└── recovery_summary.json
+```
+
 因此 GitHub 保存的是：
 
 ```text
@@ -1065,7 +1093,8 @@ medical-llm-qlora/
 ├── docs/
 │
 ├── notebooks/
-│   └── cloud_runner.ipynb
+│   ├── cloud_runner.ipynb
+│   └── fresh_recovery_validation.ipynb
 │
 ├── scripts/
 │   ├── prepare_data.py
@@ -1087,7 +1116,8 @@ medical-llm-qlora/
 │   └── public/
 │       ├── clean_main_v1/
 │       ├── ablation_rank/
-│       └── pubmedqa_external/
+│       ├── pubmedqa_external/
+│       └── recovery_validation/
 │
 ├── requirements-train.txt
 ├── requirements-dev.txt

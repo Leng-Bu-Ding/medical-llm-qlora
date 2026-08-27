@@ -1,18 +1,29 @@
+# Python bytecode and local environments
 __pycache__/
 *.pyc
 .venv/
 .test-deps/
 .conda/
+
+# Local credentials
 .env
 .env.*
 !.env.example
+
+# Test, lint, notebook, and Codex caches
 .pytest_cache/
 .codex-test-tmp/
 pytest-cache-files-*/
 .ruff_cache/
+.ipynb_checkpoints/
+.local/
 .coverage
+
+# Downloaded or generated datasets
 data/raw/
 data/processed/
+
+# Large runtime artifacts (public summaries live under results/public/)
 models/
 adapters/
 checkpoints/

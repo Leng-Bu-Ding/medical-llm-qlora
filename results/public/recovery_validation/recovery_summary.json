@@ -1,0 +1,27 @@
+{
+  "adapter": {
+    "private": true,
+    "repo_id": "Lengbuding/llama3-medquad-qlora",
+    "revision": "d26749288d78cab0839468dfa532a3beafcba871",
+    "sha256": "859c967eeb68b8523919fa7c06b23717ea4b022a38de58968759be6295e9fd9f"
+  },
+  "base_model": {
+    "repo_id": "unsloth/llama-3-8b-Instruct-bnb-4bit",
+    "revision": "fd5a4dc328319c1cfe9489eccfb9c6406bdfd469"
+  },
+  "evaluation": {
+    "expected_dataset_sha256": "281926cc8d8b7eb38edeac3e3882617be38a0658bba1fab37d90575a5a4165f8",
+    "generation_hash": "b11c4bf12c11bb2adab32621352365dfb6c10bb6e812a1146a86edf15102a593",
+    "improved": 247,
+    "metric_tolerance": 1e-07,
+    "metrics_exactly_matched": true,
+    "regressed": 53,
+    "sample_count": 300,
+    "tied": 0
+  },
+  "gpu": "Tesla T4",
+  "source_git_commit": "c8056f8fdf0a9a2d059fdda277d89d68516bc79a",
+  "status": "recovery_verified",
+  "verified_on": "2026-08-27",
+  "warning": "Owner-side recovery from a private adapter repository; not a clinical validation or anonymous third-party reproducibility claim."
+}
